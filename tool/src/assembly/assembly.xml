@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+	<id>dcm-tool-assembly</id>
+	<formats>
+		<format>tar.gz</format>
+		<format>zip</format>
+	</formats>
+	<baseDirectory>dcm-${project.version}</baseDirectory>
+	<dependencySets>
+		<dependencySet>
+			<excludes>
+				<exclude>com.github.spotbugs:*</exclude>
+				<exclude>com.google.code.findbugs:*</exclude>
+				<exclude>org.jetbrains:annotations:*</exclude>
+			</excludes>
+			<outputDirectory>dependencies</outputDirectory>
+		</dependencySet>
+	</dependencySets>
+	<fileSets>
+		<fileSet>
+			<directory>src/bin</directory>
+			<includes>
+				<include>**/**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<outputDirectory>bin</outputDirectory>
+		</fileSet>
+	</fileSets>
+</assembly>

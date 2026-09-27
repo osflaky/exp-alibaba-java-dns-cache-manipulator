@@ -1,0 +1,114 @@
+#!/bin/bash
+set -eEuo pipefail
+# the canonical path of this script
+SELF_PATH=$(realpath -- "$0")
+readonly SELF_PATH SELF_DIR=${SELF_PATH%/*}
+# cd to script dir
+cd "$SELF_DIR"
+
+readonly BASH_BUDDY_ROOT="$SELF_DIR/bash-buddy"
+# shellcheck disable=SC1091
+source "$BASH_BUDDY_ROOT/lib/trap_error_info.sh"
+# shellcheck disable=SC1091
+source "$BASH_BUDDY_ROOT/lib/common_utils.sh"
+# shellcheck disable=SC1091
+source "$BASH_BUDDY_ROOT/lib/java_utils.sh"
+# shellcheck disable=SC1091
+source "$BASH_BUDDY_ROOT/lib/maven_utils.sh"
+
+################################################################################
+# ci build logic
+################################################################################
+
+_findJdk8_0_345() {
+  local JDK_8_LATEST
+
+  # GITHUB_ACTIONS
+  #   Always set to true when GitHub Actions is running the workflow.
+  #   You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
+  # https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+  if [ true = "${GITHUB_ACTIONS:-}" ]; then
+    JAVA8_0_345_HOME="$(
+      d="$(echo /opt/hostedtoolcache/*/8.0.345*/x64)" || cu::die "Fail to get java home of v8.0.345!"
+      cd "$d" || cu::die "Fail to cd java home of v8.0.345($d)!"
+      pwd
+    )"
+
+    JDK_8_LATEST="$(echo /usr/lib/jvm/*-8-jdk-*)"
+    [ "$JDK_8_LATEST" != "$JAVA8_0_345_HOME" ] || cu::die "JDK_8_LATEST($JDK_8_LATEST) is same as JAVA8_0_345_HOME($JAVA8_0_345_HOME), NOT newer java 8 version!"
+    export JAVA8_HOME="$JDK_8_LATEST"
+  else
+    JAVA8_0_345_HOME=$(
+      cd "$JAVA8_HOME/.."/8.0.345*
+      pwd
+    )
+  fi
+  export JAVA8_0_345_HOME
+}
+_findJdk8_0_345
+
+readonly default_build_jdk_version=11
+
+# shellcheck disable=SC2034
+readonly CI_JDKS=(
+  "$JAVA8_0_345_HOME"
+  8
+  "$default_build_jdk_version"
+  17
+  21
+  25
+  26
+)
+
+# here use `install` and `-D performRelease` intended
+#   to check release operations.
+#
+# De-activate a maven profile from command line
+#   https://stackoverflow.com/questions/25201430
+#
+# shellcheck disable=SC2034
+readonly MVU_MVN_OPTS=(
+  "${MVU_DEFAULT_MVN_OPTS[@]}"
+  -DperformRelease -P'!gen-sign' -Pgen-code-cov
+  # Maven Plugin Validation
+  # https://maven.apache.org/guides/plugins/validation/index.html
+  -Dmaven.plugin.validation=NONE
+  ${CI_MORE_MVN_OPTS:+${CI_MORE_MVN_OPTS}}
+)
+
+cd ..
+
+########################################
+# build and test by default version jdk
+########################################
+
+export CI_TEST_MODE=true
+export DCM_AGENT_SUPPRESS_EXCEPTION_STACK=true
+
+jvu::switch_to_jdk "$default_build_jdk_version"
+
+# shellcheck disable=SC2153
+cu::head_line_echo "build and test with Java $default_build_jdk_version: $JAVA_HOME"
+mvu::mvn_cmd clean install
+
+########################################
+# test by multi-version jdk
+########################################
+
+SUREFIRE_TEST_GOAL=(surefire:test)
+# about CI env var
+#   https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+[ "${CI:-}" = true ] && SUREFIRE_TEST_GOAL=(jacoco:prepare-agent "${SUREFIRE_TEST_GOAL[@]}" jacoco:report)
+readonly SUREFIRE_TEST_GOAL
+
+for jdk in "${CI_JDKS[@]}"; do
+  # already tested by above `mvn install`
+  [ "$jdk" = "$default_build_jdk_version" ] && continue
+
+  jvu::switch_to_jdk "$jdk"
+
+  cu::head_line_echo "test with Java: $JAVA_HOME"
+  # just test without build
+  # shellcheck disable=SC2086
+  mvu::mvn_cmd "${SUREFIRE_TEST_GOAL[@]}"
+done

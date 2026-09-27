@@ -1,0 +1,160 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.alibaba</groupId>
+		<artifactId>dns-cache-manipulator-parent</artifactId>
+		<version>1.x-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+
+	<artifactId>dns-cache-manipulator-tool</artifactId>
+	<packaging>jar</packaging>
+	<name>Java Dns Cache Manipulator(DCM) Tool</name>
+	<description>
+		🌏 a tiny tool for setting/viewing dns of running JVM process.
+		support Java 8~21, support IPv6.
+	</description>
+	<url>https://github.com/alibaba/java-dns-cache-manipulator</url>
+	<inceptionYear>2015</inceptionYear>
+
+	<licenses>
+		<license>
+			<name>Apache 2</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+			<comments>A business-friendly OSS license</comments>
+		</license>
+	</licenses>
+	<scm>
+		<connection>scm:git:git@github.com:alibaba/java-dns-cache-manipulator.git</connection>
+		<developerConnection>scm:git:git@github.com:alibaba/java-dns-cache-manipulator.git</developerConnection>
+		<url>git@github.com:alibaba/java-dns-cache-manipulator.git</url>
+	</scm>
+	<issueManagement>
+		<url>https://github.com/alibaba/java-dns-cache-manipulator/issues</url>
+		<system>GitHub Issues</system>
+	</issueManagement>
+	<organization>
+		<name>Alibaba</name>
+		<url>https://www.alibaba.com</url>
+	</organization>
+	<developers>
+		<developer>
+			<name>Jerry Lee</name>
+			<id>oldratlee</id>
+			<email>oldratlee(AT)gmail(DOT)com</email>
+			<timezone>+8</timezone>
+			<url>https://github.com/oldratlee</url>
+			<roles>
+				<role>developer</role>
+			</roles>
+			<organization>Alibaba</organization>
+			<organizationUrl>https://www.alibaba.com</organizationUrl>
+		</developer>
+	</developers>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>dns-cache-manipulator</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-cli</groupId>
+			<artifactId>commons-cli</artifactId>
+		</dependency>
+
+		<!-- Testing libs -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://www.baeldung.com/java-comparing-versions -->
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-artifact</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<!--
+					https://maven.apache.org/plugins/maven-assembly-plugin/usage.html
+					https://maven.apache.org/plugins/maven-assembly-plugin/assembly.html
+				-->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<finalName>dcm-${project.version}</finalName>
+					<appendAssemblyId>false</appendAssemblyId>
+				</configuration>
+				<executions>
+					<execution>
+						<id>dcm-tool-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<descriptors>
+								<descriptor>src/assembly/assembly.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>tools-dependency-for-below-jdk9-standard-jdk</id>
+			<activation>
+				<!-- Only add tools.jar dependency for jdk 1.8-! -->
+				<jdk>(,1.9)</jdk>
+				<file>
+					<exists>${java.home}/../lib/tools.jar</exists>
+				</file>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>com.sun</groupId>
+					<artifactId>tools</artifactId>
+					<version>${java.version}</version>
+					<scope>system</scope>
+					<systemPath>${java.home}/../lib/tools.jar</systemPath>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>tools-dependency-for-below-jdk9-apple-jdk</id>
+			<activation>
+				<!-- Only add tools.jar dependency for jdk 1.8-! -->
+				<jdk>(,1.9)</jdk>
+				<file>
+					<!-- Only for apple brewed jdk, tools.jar is put at ${java.home}/../Classes/classes.jar. -->
+					<exists>${java.home}/../Classes/classes.jar</exists>
+				</file>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>com.sun</groupId>
+					<artifactId>tools</artifactId>
+					<version>${java.version}</version>
+					<scope>system</scope>
+					<systemPath>${java.home}/../Classes/classes.jar</systemPath>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+</project>
